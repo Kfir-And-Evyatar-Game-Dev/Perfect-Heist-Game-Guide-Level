@@ -131,6 +131,7 @@ GameObject:
   - component: {fileID: 519420031}
   - component: {fileID: 519420029}
   - component: {fileID: 519420030}
+  - component: {fileID: 519420033}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -256,6 +257,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &519420033
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 519420028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d014d89fb9f66254cb258e3ce725b158, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFit
+  map: {fileID: 1980524768}
+  margin: 0.5
+  bottomSpace: 0
 --- !u!1 &522875053
 GameObject:
   m_ObjectHideFlags: 0
@@ -980,6 +996,88 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 619394800}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &768575711
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 768575714}
+  - component: {fileID: 768575713}
+  - component: {fileID: 768575712}
+  m_Layer: 0
+  m_Name: Level
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &768575712
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 768575711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 10bc3bdfbc8f2144cba4dcbf0f8a5e06, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LevelSpawner
+  map: {fileID: 1980524768}
+  clock: {fileID: 768575713}
+  characterPrefab: {fileID: 3238068165285410909, guid: 14381c7e8bf5e1b40bd06865b3664e0e, type: 3}
+  guardPrefab: {fileID: 3182128415324922780, guid: f2dc07841d2fc0442a4eb6beebbc617b, type: 3}
+  cameraPrefab: {fileID: 1606159725078211852, guid: 07342249210d07f40af1ed09ad8566de, type: 3}
+  diamondPrefab: {fileID: 5280190267898890107, guid: f71b72cd2f554b447b19f23327e71403, type: 3}
+  exitPrefab: {fileID: 5293110766363945661, guid: cec671beb8f942348ba4ac2390840bb4, type: 3}
+  cameraRadius: 2
+  cameraOffSeconds: 8
+  guardRoutes:
+  - guardNumber: 1
+    patrolEnd: {x: 6, y: 4}
+    period: 8
+  team:
+  - displayName: Hacker
+    role: 0
+    sprite: {fileID: 876576419081252185, guid: a6d096d47081e6a429dffea9d168d730, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+  - displayName: Sneak
+    role: 2
+    sprite: {fileID: -7271638118996987146, guid: 1511d52189ddb1e4a9b470531bc99c26, type: 3}
+    color: {r: 1, g: 1, b: 1, a: 1}
+  useDemoPlan: 1
+--- !u!114 &768575713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 768575711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 565e80be5e64da14780c19e1e308b506, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RunClock
+  tutorialMode: 1
+  failPause: 2
+--- !u!4 &768575714
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 768575711}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -1993,3 +2091,4 @@ SceneRoots:
   - {fileID: 519420032}
   - {fileID: 619394802}
   - {fileID: 1980524770}
+  - {fileID: 768575714}
