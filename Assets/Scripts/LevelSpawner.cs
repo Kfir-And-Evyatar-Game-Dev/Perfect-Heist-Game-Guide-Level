@@ -53,6 +53,8 @@ public class LevelSpawner : MonoBehaviour
 
     public List<Character> Characters => characters;
     public List<SecurityCamera> Cameras => cameras;
+    public List<Guard> Guards => guards;
+    public List<ExitZone> Vans => vans;
 
     void Start()
     {
@@ -109,12 +111,36 @@ public class LevelSpawner : MonoBehaviour
             }
         }
 
-        foreach (CharacterData data in team)
+        List<CharacterData> crew = ChosenCrew();
+        for (int i = 0; i < crew.Count; i++)
         {
-            Character c = Instantiate(characterPrefab, map.DocToWorld(start), Quaternion.identity, transform);
-            c.Init(map, data, start);
+            // Stand side by side so each one can be tapped: the last one on 'P', the others to its left.
+            Vector2Int cell = start + new Vector2Int(i - (crew.Count - 1), 0);
+            if (!map.IsWalkable(cell)) cell = start;
+
+            Character c = Instantiate(characterPrefab, map.DocToWorld(cell), Quaternion.identity, transform);
+            c.Init(map, crew[i], cell);
             characters.Add(c);
         }
+    }
+
+    /// <summary>
+    /// The crew picked on the crew screen (carried here by the GameManager).
+    /// When the scene is started directly in the editor, the Inspector team is used.
+    /// </summary>
+    List<CharacterData> ChosenCrew()
+    {
+        GameManager gm = GameManager.Instance;
+        if (gm == null || gm.Team.Count == 0) return team;
+
+        var crew = new List<CharacterData>();
+        foreach (CharacterRole role in gm.Team)
+        {
+            CharacterData data = team.Find(d => d.role == role)
+                                 ?? new CharacterData { role = role, displayName = CharacterCatalog.Get(role).name };
+            crew.Add(data);
+        }
+        return crew;
     }
 
     /// <summary>

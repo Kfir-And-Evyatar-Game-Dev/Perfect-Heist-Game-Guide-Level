@@ -26,6 +26,9 @@ public class Guard : MonoBehaviour
     Vector2Int pointA, pointB;
     float period;
 
+    public Vector2Int PatrolStart => pointA;
+    public Vector2Int PatrolEnd => pointB;
+
     public void Init(MapBuilder map, Vector2Int start, Vector2Int patrolEnd, float period)
     {
         this.map = map;

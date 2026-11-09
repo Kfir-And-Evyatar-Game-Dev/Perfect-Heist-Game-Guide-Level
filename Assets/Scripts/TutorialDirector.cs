@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Walks the player through the tutorial one rule at a time (level design, level 0).
-/// Each step shows a message, may flash a cell on the map, unlocks the buttons it
-/// needs, and moves on as soon as the player's plan does what the step asks.
+/// The planning tutorial, taught one tiny step at a time: every step highlights
+/// exactly one thing (a character, a button, a map cell, the camera...) and only
+/// that thing can be tapped. Built on GuideRunner / GuideOverlay.
 /// </summary>
 public class TutorialDirector : MonoBehaviour
 {
@@ -15,148 +15,149 @@ public class TutorialDirector : MonoBehaviour
     public RunClock clock;
     public MapBuilder map;
 
-    class Step
-    {
-        public string text;
-        public Func<Vector2Int?> highlight;
-        public Func<bool> done;        // null = wait for the Continue button
-        public Action onEnter;
-    }
-
-    readonly List<Step> steps = new List<Step>();
-    int index = -1;
-    bool runSucceeded;
-    SpriteRenderer marker;
-
-    Character Hacker => spawner.Characters.Find(c => c.Role == CharacterRole.Hacker);
-    Character Sneak => spawner.Characters.Find(c => c.Role == CharacterRole.Sneak);
+    Character H => spawner.Characters.Find(c => c.Role == CharacterRole.Hacker);
+    Character S => spawner.Characters.Find(c => c.Role == CharacterRole.Sneak);
 
     IEnumerator Start()
     {
-        while (ui == null || !ui.Ready) yield return null; // wait until the planning screen exists
+        if (ui == null) ui = FindAnyObjectByType<PlanningUI>();
+        while (ui == null || !ui.Ready) yield return null; // wait for the planning screen
 
-        // The tutorial starts with empty plans and locked buttons.
+        // Use the planning screen's references for anything that wasn't dragged in.
+        if (spawner == null) spawner = ui.spawner;
+        if (clock == null) clock = ui.clock;
+        if (map == null) map = ui.map;
+
+        if (H == null || S == null || spawner.Cameras.Count == 0)
+        {
+            Debug.LogWarning("Tutorial needs a Hacker, a Sneak and a camera.");
+            yield break;
+        }
+
         foreach (Character c in spawner.Characters) c.Plan.Clear();
-        ui.allowCameraOff = false;
-        ui.allowPickup = false;
         ui.allowRun = false;
+        ui.ClosePanel();
         ui.PlanChanged();
 
-        clock.OnRunEnded += (success, reason) => { if (success) runSucceeded = true; };
-        CreateMarker();
-        BuildSteps();
-        Next();
+        GuideRunner.Run(BuildSteps());
     }
 
-    void BuildSteps()
+    List<GuideStep> BuildSteps()
     {
         Vector2Int diamond = spawner.FindCell('$');
         Vector2Int van = spawner.FindCell('X');
+        Vector2Int room = new Vector2Int(3, 3);
+        Vector2Int door = new Vector2Int(7, 2);
+        Vector2Int rightTop = new Vector2Int(9, 1);
+        Vector2Int rightBottom = new Vector2Int(9, 4);
+        SecurityCamera cam = spawner.Cameras[0];
 
-        steps.Add(new Step
+        return new List<GuideStep>
         {
-            text = "Welcome to your first heist! Every crew member has different skills.\n" +
-                   "This time you plan for the Hacker and the Sneak.",
-        });
-        steps.Add(new Step
-        {
-            text = "Select the Sneak (bottom left), then tap the flashing cell to walk there.",
-            highlight = () => new Vector2Int(3, 3),
-            done = () => HasMoveTo(Sneak, new Vector2Int(3, 3)),
-        });
-        steps.Add(new Step
-        {
-            text = "The camera sees everything in its red circle. Select the Hacker,\n" +
-                   "tap 'Wait +1s' three times, then 'Camera off' (it stays off for 8 seconds).",
-            onEnter = () => ui.allowCameraOff = true,
-            done = () => Has<DisableCameraCommand>(Hacker),
-        });
-        steps.Add(new Step
-        {
-            text = "The guard walks up and down. Drag along the timeline to see where he will be.\n" +
-                   "Select the Sneak and add a wait (about 6 s) so he crosses behind the guard's back.",
-            done = () => Has<WaitCommand>(Sneak),
-        });
-        steps.Add(new Step
-        {
-            text = "Now walk the Sneak through the door and onto the diamond.\n" +
-                   "Tip: the camera is only off between seconds 3 and 11.",
-            highlight = () => diamond,
-            done = () => HasMoveTo(Sneak, diamond),
-        });
-        steps.Add(new Step
-        {
-            text = "Tap 'Pick up' to take the diamond.",
-            onEnter = () => ui.allowPickup = true,
-            done = () => Has<PickupCommand>(Sneak),
-        });
-        steps.Add(new Step
-        {
-            text = "Everyone must escape: send BOTH the Hacker and the Sneak to the getaway van.\n" +
-                   "Hint: keep the Sneak 3 cells away from the guard's path (the right-hand column).",
-            highlight = () => van,
-            done = () => EndsAt(Hacker, van) && EndsAt(Sneak, van),
-        });
-        steps.Add(new Step
-        {
-            text = "Your plan is ready. Tap RUN and watch.\n" +
-                   "If someone is seen, you come back here with your plan kept. Stuck? Tap 'Show me'.",
-            onEnter = () => { ui.allowRun = true; runSucceeded = false; },
-            done = () => runSucceeded,
-        });
+            // --- Getting to know the map
+            GuideStep.Explain("This is the heist map. Your mission: steal the diamond\nand escape in the getaway van!", "Show me"),
+            GuideStep.Show("This is the diamond. That's what we came for!", () => Cell(diamond)),
+            GuideStep.Show("This is the getaway van. At the end, every crew member must get in.",
+                           () => World(spawner.Vans[0].transform.position, new Vector2(1.7f, 1f))),
+            GuideStep.Show("This is a guard. He walks up and down the blue dotted line.\nIf he sees one of your crew, the heist fails!", GuardRoute),
+            GuideStep.Show("This is a security camera. It sees everyone inside the red circle.",
+                           () => World(cam.transform.position, Vector2.one * (cam.Radius * 2f + 0.4f))),
+            GuideStep.Show("This is your crew: the Hacker and the Sneak.\nYou will give each of them a plan.", Crew),
+
+            // --- The Hacker
+            GuideStep.Tap("Tap the Hacker to plan the Hacker's moves.", () => Char(H), () => Selected(H)),
+            GuideStep.Show("This is the Hacker's timeline. Every action you add appears here,\nfrom left to right. The numbers are seconds.",
+                           () => UIKit.ScreenRect(ui.TimelineRect)),
+            GuideStep.Show("These are the Hacker's actions. 'Camera off' is the Hacker's\nspecial skill - only the Hacker has it.",
+                           () => UIKit.ScreenRect(ui.ActionBarRect)),
+            GuideStep.Explain("Our plan: the Sneak needs about 3 seconds to reach the first room.\n" +
+                              "Then the Hacker switches the camera off, so the Sneak can pass.", "OK"),
+            GuideStep.Tap("First the Hacker waits. Tap 'Wait +1s'.", () => Btn("wait1"), () => LastWait(H, 1)),
+            GuideStep.Tap("Tap 'Wait +1s' again. (2 seconds)", () => Btn("wait1"), () => LastWait(H, 2)),
+            GuideStep.Tap("And once more. (3 seconds)", () => Btn("wait1"), () => LastWait(H, 3)),
+            GuideStep.Show("Look! A 3-second wait is now on the Hacker's timeline.", () => ui.LastBlockScreenRect(H)),
+            GuideStep.Tap("Now tap 'Camera off'.", () => Btn("camera"), () => ui.Mode == PlanMode.ChooseCamera),
+            GuideStep.Tap("Tap the security camera to switch it off.",
+                          () => World(cam.transform.position, Vector2.one), () => LastIs<DisableCameraCommand>(H)),
+            GuideStep.Show("At second 3 the camera switches off, for 8 seconds.", () => ui.LastBlockScreenRect(H)),
+            GuideStep.Tap("Now the Hacker escapes to the van. Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Tap the glowing spot by the van.", () => Cell(van), () => LastMoveTo(H, van)),
+            GuideStep.Tap("The Hacker's plan is ready! Tap 'Done'.", () => UIKit.ScreenRect(ui.DoneButtonRect), () => !ui.PanelOpen),
+
+            // --- The Sneak
+            GuideStep.Tap("Now tap the Sneak.", () => Char(S), () => Selected(S)),
+            GuideStep.Tap("The Sneak walks into the first room. Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Tap the glowing spot.", () => Cell(room), () => LastMoveTo(S, room)),
+            GuideStep.Show("Careful! The guard is walking toward the door. If the Sneak goes now,\n" +
+                           "the guard will see him. We wait until the guard turns his back.", GuardRoute),
+            GuideStep.Tap("Tap 'Wait +5s'.", () => Btn("wait5"), () => LastWait(S, 5)),
+            GuideStep.Tap("Tap 'Wait +1s'. Now the Sneak waits 6 seconds.", () => Btn("wait1"), () => LastWait(S, 6)),
+            GuideStep.Show("Look at the timeline: the Hacker's row is still here.\n" +
+                           "Use it to line up your timing - the camera is off from second 3 to 11.",
+                           () => UIKit.ScreenRect(ui.TimelineRect)),
+            GuideStep.Tap("Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Walk through the door to here. The camera is off\nand the guard's back is turned!",
+                          () => Cell(door), () => LastMoveTo(S, door)),
+            GuideStep.Tap("Tap 'Walk' again.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Tap the diamond.", () => Cell(diamond), () => LastMoveTo(S, diamond)),
+            GuideStep.Tap("Tap 'Pick up' to grab the diamond.", () => Btn("pickup"), () => LastIs<PickupCommand>(S)),
+            GuideStep.Explain("Got it! Now the escape. The guard turns around soon, so the Sneak\n" +
+                              "runs down the far right side, where the guard can't see.", "OK"),
+            GuideStep.Tap("Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Tap the corner on the right.", () => Cell(rightTop), () => LastMoveTo(S, rightTop)),
+            GuideStep.Tap("Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("Go down the right side.", () => Cell(rightBottom), () => LastMoveTo(S, rightBottom)),
+            GuideStep.Tap("Tap 'Walk'.", () => Btn("walk"), () => ui.Mode == PlanMode.ChooseCell),
+            GuideStep.Tap("And into the van!", () => Cell(van), () => LastMoveTo(S, van)),
+            GuideStep.Tap("The Sneak's plan is ready! Tap 'Done'.", () => UIKit.ScreenRect(ui.DoneButtonRect), () => !ui.PanelOpen),
+
+            // --- Run it
+            GuideStep.Show("Your plan is ready! The colored lines show where each one will walk.", MapRect),
+            GuideStep.Tap("Tap RUN and watch your plan come to life!", () => UIKit.ScreenRect(ui.RunButtonRect),
+                          () => clock.State == RunState.Running, () => ui.allowRun = true),
+        };
     }
 
-    void Next()
+    // ------------------------------------------------------------------ where to point
+
+    Rect Cell(Vector2Int c) => World(map.DocToWorld(c), Vector2.one);
+    Rect Char(Character c) => World(c.transform.position, Vector2.one * 0.95f);
+    Rect World(Vector3 center, Vector2 size) => UIKit.ScreenRect(center, size);
+
+    Rect Btn(string id)
     {
-        index++;
-        if (index >= steps.Count)
-        {
-            ui.SetMessage("Tutorial complete! You pulled off your first heist.");
-            ui.OnContinue = null;
-            marker.enabled = false;
-            return;
-        }
-
-        Step s = steps[index];
-        ui.SetMessage(s.text);
-        ui.OnContinue = s.done == null ? (Action)Next : null;
-        s.onEnter?.Invoke();
+        RectTransform rt = ui.ActionButton(id);
+        return rt != null ? UIKit.ScreenRect(rt) : Rect.zero;
     }
 
-    void Update()
+    Rect GuardRoute()
     {
-        if (index < 0 || index >= steps.Count) return;
-        Step s = steps[index];
-
-        Vector2Int? cell = s.highlight?.Invoke();
-        marker.enabled = cell.HasValue && clock.State == RunState.Planning;
-        if (cell.HasValue)
-        {
-            marker.transform.position = map.DocToWorld(cell.Value);
-            float pulse = 0.25f + 0.25f * Mathf.Sin(Time.time * 5f);
-            marker.color = new Color(1f, 0.9f, 0.2f, pulse);
-        }
-
-        if (s.done != null && s.done()) Next();
+        Guard g = spawner.Guards[0];
+        return Union(Cell(g.PatrolStart), Cell(g.PatrolEnd));
     }
 
-    void CreateMarker()
+    Rect Crew()
     {
-        var go = new GameObject("Tutorial Marker");
-        marker = go.AddComponent<SpriteRenderer>();
-        marker.sprite = map.wallLineSprite; // any plain white square
-        marker.sortingOrder = 2;
-        Vector2 size = marker.sprite != null ? (Vector2)marker.sprite.bounds.size : Vector2.one;
-        go.transform.localScale = new Vector3(0.9f / size.x, 0.9f / size.y, 1f);
-        marker.enabled = false;
+        Rect r = Char(spawner.Characters[0]);
+        foreach (Character c in spawner.Characters) r = Union(r, Char(c));
+        return r;
     }
 
-    static bool HasMoveTo(Character c, Vector2Int cell) =>
-        c != null && c.Plan.Exists(cmd => cmd is MoveCommand m && m.Target == cell);
+    Rect MapRect() => Union(Cell(Vector2Int.zero), Cell(new Vector2Int(map.Width - 1, map.Height - 1)));
 
-    static bool Has<T>(Character c) where T : Command =>
-        c != null && c.Plan.Exists(cmd => cmd is T);
+    static Rect Union(Rect a, Rect b) =>
+        Rect.MinMaxRect(Mathf.Min(a.xMin, b.xMin), Mathf.Min(a.yMin, b.yMin), Mathf.Max(a.xMax, b.xMax), Mathf.Max(a.yMax, b.yMax));
 
-    static bool EndsAt(Character c, Vector2Int cell) =>
-        c != null && c.Plan.Count > 0 && c.Plan[c.Plan.Count - 1] is MoveCommand m && m.Target == cell;
+    // ------------------------------------------------------------------ checks
+
+    bool Selected(Character c) => ui.PanelOpen && ui.Selected == c;
+
+    static bool LastWait(Character c, float seconds) =>
+        c.Plan.Count > 0 && c.Plan[c.Plan.Count - 1] is WaitCommand w && w.Seconds >= seconds - 0.01f;
+
+    static bool LastMoveTo(Character c, Vector2Int cell) =>
+        c.Plan.Count > 0 && c.Plan[c.Plan.Count - 1] is MoveCommand m && m.Target == cell;
+
+    static bool LastIs<T>(Character c) where T : Command =>
+        c.Plan.Count > 0 && c.Plan[c.Plan.Count - 1] is T;
 }
