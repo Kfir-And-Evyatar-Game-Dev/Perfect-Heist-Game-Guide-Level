@@ -29,7 +29,10 @@ public class Character : MonoBehaviour
     /// <summary>Seconds a character takes to get into the getaway van.</summary>
     public const float BoardTime = 0.5f;
 
-    public SpriteRenderer body;
+    [SerializeField] SpriteRenderer body;
+
+    /// <summary>The character's image (used by the planning screen for the portrait and path colour).</summary>
+    public SpriteRenderer Body => body;
 
     public string DisplayName { get; private set; }
     public CharacterRole Role { get; private set; }

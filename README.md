@@ -9,9 +9,16 @@
 
 | | |
 |---|---|
-| **לשחק בדפדפן** | **[kfir-and-evyatar.itch.io/perfect-heist-guide-level](https://kfir-and-evyatar.itch.io/perfect-heist-guide-level)** (גם בטלפון, לרוחב) |
+| **לשחק בדפדפן, ולהוריד APK לאנדרואיד** | **[kfir-and-evyatar.itch.io/perfect-heist-guide-level](https://kfir-and-evyatar.itch.io/perfect-heist-guide-level)** (גם בטלפון, לרוחב) |
 | **סרטון מהטלפון** | *(יתווסף)* |
-| **מסמכי התכנון** | [תכנון הרמות](https://github.com/Kfir-And-Evyatar-Game-Dev/---Perfect-Heist/blob/main/Level_Design.md), [הרכיבים הרשמיים](https://github.com/Kfir-And-Evyatar-Game-Dev/---Perfect-Heist) |
+| **תכנון הרמות של המשחק הזה** | [Level_Design.md: השוד המושלם](https://github.com/Kfir-And-Evyatar-Game-Dev/---Perfect-Heist/blob/main/Level_Design.md), עם מפות ותרשימים |
+
+### הריפוזיטוריז של חלק א (תכנון רמות לכל N+1 המשחקים)
+| משחק | ריפו |
+|---|---|
+| השוד המושלם (המשחק שמומש כאן) | [---Perfect-Heist](https://github.com/Kfir-And-Evyatar-Game-Dev/---Perfect-Heist) |
+| כיבוש המפה | [---Map-Conquest](https://github.com/Kfir-And-Evyatar-Game-Dev/---Map-Conquest) |
+| רעש שמציל | [---sound-of-survival](https://github.com/Kfir-And-Evyatar-Game-Dev/---sound-of-survival) |
 
 ---
 
@@ -106,6 +113,24 @@
 
 ### בנייה
 - **WebGL ל־itch.io:** ‏**Tools**, ‏**Perfect Heist**, ‏**Build WebGL for itch.io**. נוצר הקובץ `Builds/PerfectHeist-WebGL.zip`, שאותו מעלים ל־itch.io כפרויקט HTML.
-- **Android:** ב־**File**, ‏**Build Profiles** בוחרים **Android**, ואז **Switch Platform** ו־**Build**.
+- **Android:** ‏**Tools**, ‏**Perfect Heist**, ‏**Build Android APK**. נוצר הקובץ `Builds/PerfectHeist.apk`, שמתקינים בטלפון ומעלים לאותו דף ב־itch.io כקובץ להורדה.
+
+### בדיקת קוד (Linter)
+הקובץ `.github/workflows/linter.yml` הוא הלינטר של הקורס, בלי שינויים. הוא מריץ `dotnet-format` על `Assets/Scripts` בכל push. אפשר לבדוק לפני push עם:
+
+```
+dotnet format whitespace Assets/Scripts --folder --verify-no-changes
+```
+
+---
+
+## עזרה וכלי בינה מלאכותית
+
+| כלי | למה השתמשנו בו |
+|---|---|
+| **Claude Code** (Anthropic) | כתיבת הקוד יחד איתנו, תכנון הארכיטקטורה (שעון הרצה דטרמיניסטי, פקודות, מערכת ההדרכה), כתיבת מסמך תכנון הרמות וה־README, ועיבוד התמונות: הסרת רקע מזויף וחיתוך לקבצים נפרדים |
+| **Gemini** (Google) | יצירת התמונות של הדמויות, השומר, המצלמה, היהלום ורכב המילוט |
+
+**איך עבדנו עם Claude:** תיארנו מה אנחנו רוצים: מסכים, חוקים, איך המדריך צריך ללמד. Claude כתב קוד, ואנחנו בדקנו כל שלב ב־Unity, מצאנו בעיות והחזרנו משוב. שנינו עברנו על הקוד ומבינים כל חלק בו, כמו שהקורס דורש.
 
 </div>

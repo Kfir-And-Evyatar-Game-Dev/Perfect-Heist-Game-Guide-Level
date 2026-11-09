@@ -10,10 +10,10 @@ using UnityEngine;
 /// </summary>
 public class TutorialDirector : MonoBehaviour
 {
-    public PlanningUI ui;
-    public LevelSpawner spawner;
-    public RunClock clock;
-    public MapBuilder map;
+    [SerializeField] PlanningUI ui;
+    [SerializeField] LevelSpawner spawner;
+    [SerializeField] RunClock clock;
+    [SerializeField] MapBuilder map;
 
     Character H => spawner.Characters.Find(c => c.Role == CharacterRole.Hacker);
     Character S => spawner.Characters.Find(c => c.Role == CharacterRole.Sneak);
@@ -24,9 +24,9 @@ public class TutorialDirector : MonoBehaviour
         while (ui == null || !ui.Ready) yield return null; // wait for the planning screen
 
         // Use the planning screen's references for anything that wasn't dragged in.
-        if (spawner == null) spawner = ui.spawner;
-        if (clock == null) clock = ui.clock;
-        if (map == null) map = ui.map;
+        if (spawner == null) spawner = ui.Spawner;
+        if (clock == null) clock = ui.Clock;
+        if (map == null) map = ui.Map;
 
         if (H == null || S == null || spawner.Cameras.Count == 0)
         {
@@ -35,7 +35,7 @@ public class TutorialDirector : MonoBehaviour
         }
 
         foreach (Character c in spawner.Characters) c.Plan.Clear();
-        ui.allowRun = false;
+        ui.AllowRun = false;
         ui.ClosePanel();
         ui.PlanChanged();
 
@@ -114,7 +114,7 @@ public class TutorialDirector : MonoBehaviour
             // --- Run it
             GuideStep.Show("Your plan is ready! The colored lines show where each one will walk.", MapRect),
             GuideStep.Tap("Tap RUN and watch your plan come to life!", () => UIKit.ScreenRect(ui.RunButtonRect),
-                          () => clock.State == RunState.Running, () => ui.allowRun = true),
+                          () => clock.State == RunState.Running, () => ui.AllowRun = true),
         };
     }
 

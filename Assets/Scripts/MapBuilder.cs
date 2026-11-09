@@ -15,16 +15,17 @@ using UnityEditor.SceneManagement;
 public class MapBuilder : MonoBehaviour
 {
     [Header("Tilemaps")]
-    public Tilemap floorTilemap;
-    public Tilemap wallsTilemap;
+    [SerializeField] Tilemap floorTilemap;
+    [SerializeField] Tilemap wallsTilemap;
 
     [Header("Tiles")]
-    public TileBase floorTile;
-    public TileBase wallTile;
+    [SerializeField] TileBase floorTile;
+    [SerializeField] TileBase wallTile;
 
     [Header("Layout ('#' = wall, everything else = floor)")]
     [TextArea(8, 20)]
-    public string layout =
+    [SerializeField]
+    string layout =
         "###########\n" +
         "#...&#1.$.#\n" +
         "#....D....#\n" +
@@ -34,15 +35,18 @@ public class MapBuilder : MonoBehaviour
         "..P......X.";
 
     [Tooltip("Move the Main Camera to the middle of the map after building.")]
-    public bool centerCamera = true;
+    [SerializeField] bool centerCamera = true;
 
     [Header("Thin walls (looks only: a wall cell still blocks movement and sight)")]
     [Tooltip("Draw walls as thin lines through the middle of the wall cells instead of full tiles.")]
-    public bool thinWalls = true;
-    [Range(0.05f, 1f)] public float wallThickness = 0.25f;
+    [SerializeField] bool thinWalls = true;
+    [SerializeField, Range(0.05f, 1f)] float wallThickness = 0.25f;
     [Tooltip("Any plain white square sprite, e.g. Sprites/Wall.")]
-    public Sprite wallLineSprite;
-    public Color wallColor = new Color(0.22f, 0.25f, 0.32f);
+    [SerializeField] Sprite wallLineSprite;
+
+    /// <summary>A plain white square sprite, also used for markers on the map.</summary>
+    public Sprite WallLineSprite => wallLineSprite;
+    [SerializeField] Color wallColor = new Color(0.22f, 0.25f, 0.32f);
 
     const string WallVisualsName = "Wall Visuals";
 
@@ -115,18 +119,49 @@ public class MapBuilder : MonoBehaviour
         return path;
     }
 
-    /// <summary>True when no wall cell lies on the straight line between two document positions.</summary>
+    /// <summary>
+    /// True when the point (document coordinates) is inside a wall as it is drawn:
+    /// a thin bar through the middle of the wall cells (or the full cell when thin walls are off).
+    /// Points outside the map count as wall.
+    /// </summary>
+    public bool IsWallAt(Vector2 p)
+    {
+        var cell = new Vector2Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y));
+        if (!InBounds(cell)) return true;
+        if (CharAt(cell.x, cell.y) != '#') return false;
+        if (!thinWalls) return true;
+
+        float h = wallThickness / 2f;
+        Vector2 local = p - cell; // -0.5..0.5 inside the cell
+        bool inX = Mathf.Abs(local.x) <= h, inY = Mathf.Abs(local.y) <= h;
+        if (inX && inY) return true;                                                   // centre post
+        if (inY && local.x >= 0 && IsWallCell(cell.x + 1, cell.y)) return true;        // bar to the right
+        if (inY && local.x <= 0 && IsWallCell(cell.x - 1, cell.y)) return true;        // bar to the left
+        if (inX && local.y >= 0 && IsWallCell(cell.x, cell.y + 1)) return true;        // bar downward
+        if (inX && local.y <= 0 && IsWallCell(cell.x, cell.y - 1)) return true;        // bar upward
+        return false;
+    }
+
+    /// <summary>
+    /// True when nothing blocks the straight line between two document positions.
+    /// Uses the same wall shape that is drawn, so what the player sees is what counts.
+    /// </summary>
     public bool HasLineOfSight(Vector2 a, Vector2 b)
     {
         float distance = Vector2.Distance(a, b);
-        int steps = Mathf.Max(1, Mathf.CeilToInt(distance / 0.1f));
+        int steps = Mathf.Max(1, Mathf.CeilToInt(distance / 0.05f));
         for (int i = 1; i < steps; i++)
-        {
-            Vector2 p = Vector2.Lerp(a, b, i / (float)steps);
-            var cell = new Vector2Int(Mathf.RoundToInt(p.x), Mathf.RoundToInt(p.y));
-            if (!InBounds(cell) || CharAt(cell.x, cell.y) == '#') return false;
-        }
+            if (IsWallAt(Vector2.Lerp(a, b, i / (float)steps))) return false;
         return true;
+    }
+
+    /// <summary>How far a ray from <paramref name="origin"/> travels before hitting a wall (at most maxDistance).</summary>
+    public float RayDistance(Vector2 origin, Vector2 direction, float maxDistance)
+    {
+        const float step = 0.04f;
+        for (float d = step; d < maxDistance; d += step)
+            if (IsWallAt(origin + direction * d)) return d - step;
+        return maxDistance;
     }
 
     [ContextMenu("Build Map")]
@@ -190,7 +225,7 @@ public class MapBuilder : MonoBehaviour
             if (!Application.isPlaying) Undo.DestroyObjectImmediate(old.gameObject);
             else
 #endif
-                Destroy(old.gameObject);
+            Destroy(old.gameObject);
         }
 
         var wallRenderer = wallsTilemap.GetComponent<TilemapRenderer>();

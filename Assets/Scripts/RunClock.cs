@@ -16,10 +16,13 @@ public class RunClock : MonoBehaviour
     public static RunClock Instance { get; private set; }
 
     [Tooltip("Tutorial: a failed run never disqualifies, it returns to planning with the plan kept.")]
-    public bool tutorialMode = true;
+    [SerializeField] bool tutorialMode = true;
 
     [Tooltip("Real seconds to show what went wrong before returning to planning.")]
-    public float failPause = 2f;
+    [SerializeField] float failPause = 2f;
+
+    /// <summary>When true, a failed run returns to planning by itself after a short pause.</summary>
+    public bool TutorialMode { get => tutorialMode; set => tutorialMode = value; }
 
     public RunState State { get; private set; } = RunState.Planning;
 

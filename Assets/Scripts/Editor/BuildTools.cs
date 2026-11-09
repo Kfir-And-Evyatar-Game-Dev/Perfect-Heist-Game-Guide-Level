@@ -58,4 +58,44 @@ static class BuildTools
         EditorUtility.DisplayDialog("Build WebGL",
             "Done!\n\nUpload this file to itch.io:\n" + full, "OK");
     }
+
+    const string AndroidApk = "Builds/PerfectHeist.apk";
+
+    /// <summary>
+    /// Builds an installable APK (not an App Bundle), signed with Unity's debug key,
+    /// which is enough to install it on a phone and to offer it as a download on itch.io.
+    /// </summary>
+    [MenuItem("Tools/Perfect Heist/Build Android APK")]
+    static void BuildAndroid()
+    {
+        PlayerSettings.productName = "Perfect Heist";
+        EditorUserBuildSettings.buildAppBundle = false;               // .apk, not .aab
+        PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+        PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+        PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
+
+        string[] scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+        Directory.CreateDirectory("Builds");
+        if (File.Exists(AndroidApk)) File.Delete(AndroidApk);
+
+        BuildReport report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+        {
+            scenes = scenes,
+            locationPathName = AndroidApk,
+            target = BuildTarget.Android,
+            options = BuildOptions.None,
+        });
+
+        if (report.summary.result != BuildResult.Succeeded)
+        {
+            EditorUtility.DisplayDialog("Build Android", "The build failed. See the Console for details.", "OK");
+            return;
+        }
+
+        string full = Path.GetFullPath(AndroidApk);
+        Debug.Log("Android build ready: " + full);
+        EditorUtility.RevealInFinder(full);
+        EditorUtility.DisplayDialog("Build Android",
+            "Done!\n\nInstall on the phone and upload to itch.io:\n" + full, "OK");
+    }
 }

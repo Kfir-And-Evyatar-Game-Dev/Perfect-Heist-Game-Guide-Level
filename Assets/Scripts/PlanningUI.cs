@@ -15,19 +15,25 @@ public enum PlanMode { None, ChooseCell, ChooseCamera }
 /// </summary>
 public class PlanningUI : MonoBehaviour
 {
-    public LevelSpawner spawner;
-    public RunClock clock;
-    public MapBuilder map;
-    public CameraFit cameraFit;
+    [SerializeField] LevelSpawner spawner;
+    [SerializeField] RunClock clock;
+    [SerializeField] MapBuilder map;
+    [SerializeField] CameraFit cameraFit;
 
-    [Header("Layout (pixels at 1920x1080)")]
-    public float topBarHeight = 120f;
-    public float panelHeight = 400f;
-    public float pixelsPerSecond = 40f;
-    public float rowHeight = 62f;
+    // Layout, in pixels at the 1920x1080 reference resolution.
+    const float topBarHeight = 100f;
+    const float panelHeight = 330f;
 
-    [Tooltip("The tutorial keeps RUN locked until the plan is ready.")]
-    public bool allowRun = true;
+    [Header("Timeline")]
+    [SerializeField] float pixelsPerSecond = 40f;
+    [SerializeField] float rowHeight = 62f;
+
+    /// <summary>The tutorial keeps RUN hidden until the plan is ready.</summary>
+    public bool AllowRun { get; set; } = true;
+
+    public LevelSpawner Spawner => spawner;
+    public RunClock Clock => clock;
+    public MapBuilder Map => map;
 
     public Character Selected { get; private set; }
     public PlanMode Mode { get; private set; }
@@ -45,6 +51,7 @@ public class PlanningUI : MonoBehaviour
     Text statusText, panelName, failReason;
     Image panelPortrait;
     GameObject panel, failWindow;
+    RectTransform topBarRect;
     RectTransform actionBar, timelineArea, playhead;
     Button runButton, doneButton;
     readonly Dictionary<string, Button> actionButtons = new Dictionary<string, Button>();
@@ -60,11 +67,11 @@ public class PlanningUI : MonoBehaviour
 
         // Fill any reference that wasn't dragged in, so a missing field can't break the screen.
         if (spawner == null) spawner = FindAnyObjectByType<LevelSpawner>();
-        if (map == null) map = spawner != null && spawner.map != null ? spawner.map : FindAnyObjectByType<MapBuilder>();
-        if (clock == null) clock = spawner != null && spawner.clock != null ? spawner.clock : FindAnyObjectByType<RunClock>();
+        if (map == null) map = spawner != null && spawner.Map != null ? spawner.Map : FindAnyObjectByType<MapBuilder>();
+        if (clock == null) clock = spawner != null && spawner.Clock != null ? spawner.Clock : FindAnyObjectByType<RunClock>();
         if (cameraFit == null && Camera.main != null) cameraFit = Camera.main.GetComponent<CameraFit>();
 
-        clock.tutorialMode = false; // failures show the "Attempt failed" window instead
+        clock.TutorialMode = false; // failures show the "Attempt failed" window instead
         clock.PreviewTime = 0f;     // during planning everyone stands at their start position
         BuildUI();
         foreach (Character c in spawner.Characters) CreatePath(c);
@@ -72,7 +79,6 @@ public class PlanningUI : MonoBehaviour
         CreateCellMarkers();
 
         clock.OnRunEnded += HandleRunEnded;
-        if (cameraFit != null) cameraFit.SetSpace(1.4f, 4.6f);
 
         ClosePanel();
         PlanChanged();
@@ -87,7 +93,7 @@ public class PlanningUI : MonoBehaviour
         Mode = PlanMode.None;
         panel.SetActive(true);
         panelName.text = c.DisplayName;
-        panelPortrait.sprite = c.body != null ? c.body.sprite : null;
+        panelPortrait.sprite = c.Body != null ? c.Body.sprite : null;
         BuildActionButtons(c);
         RefreshAll();
         SetStatus(c.DisplayName + ": add actions with the buttons below.");
@@ -130,7 +136,7 @@ public class PlanningUI : MonoBehaviour
             SecurityCamera cam = spawner.Cameras.Find(c => Vector2Int.Distance(c.Cell, cell) < 1.1f);
             if (cam == null) { SetStatus("Tap a security camera."); return; }
             SetMode(PlanMode.None);
-            AddCommand(new DisableCameraCommand(cam.Cell, spawner.cameraOffSeconds));
+            AddCommand(new DisableCameraCommand(cam.Cell, spawner.CameraOffSeconds));
             return;
         }
 
@@ -214,8 +220,6 @@ public class PlanningUI : MonoBehaviour
         RefreshPaths();
     }
 
-    /// <summary>Kept for TimelineScrubber; planning no longer previews other seconds, so characters stay put.</summary>
-    public void ScrubTo(Vector2 screenPos) { }
 
     public void SetStatus(string text)
     {
@@ -258,7 +262,7 @@ public class PlanningUI : MonoBehaviour
         if (!Ready) return;
         bool planning = clock.State == RunState.Planning;
 
-        runButton.gameObject.SetActive(allowRun);
+        runButton.gameObject.SetActive(AllowRun);
         runButton.interactable = planning;
         foreach (Button b in actionButtons.Values) b.interactable = planning;
         if (actionButtons.TryGetValue("undo", out Button undo))
@@ -266,6 +270,15 @@ public class PlanningUI : MonoBehaviour
 
         if (PanelOpen)
             playhead.anchoredPosition = new Vector2(clock.CurrentTime * pixelsPerSecond, 0f);
+
+        // Tell the camera how much of the screen the bars cover, so the map fits in the rest
+        // (and slides up above the timeline window when it opens).
+        if (cameraFit != null && Screen.height > 0)
+        {
+            float top = UIKit.ScreenRect(topBarRect).height / Screen.height;
+            float bottom = PanelOpen ? UIKit.ScreenRect((RectTransform)panel.transform).height / Screen.height : 0.02f;
+            cameraFit.SetCovered(top, bottom);
+        }
 
         float pulse = 0.18f + 0.12f * Mathf.Sin(Time.time * 5f);
         foreach (SpriteRenderer m in cellMarkers) m.color = new Color(1f, 1f, 1f, pulse);
@@ -281,7 +294,7 @@ public class PlanningUI : MonoBehaviour
         lr.sortingOrder = 4;
         lr.numCapVertices = 4;
         lr.numCornerVertices = 2;
-        if (c.body != null) lr.sharedMaterial = c.body.sharedMaterial; // a sprite material that is always in the build
+        if (c.Body != null) lr.sharedMaterial = c.Body.sharedMaterial; // a sprite material that is always in the build
         paths[c] = lr;
     }
 
@@ -340,7 +353,7 @@ public class PlanningUI : MonoBehaviour
         var sr = new GameObject(name).AddComponent<SpriteRenderer>();
         sr.transform.SetParent(transform, false);
         sr.transform.position = position;
-        sr.sprite = map.wallLineSprite; // any plain white square
+        sr.sprite = map.WallLineSprite; // any plain white square
         sr.sortingOrder = 1;
         Vector2 s = sr.sprite != null ? (Vector2)sr.sprite.bounds.size : Vector2.one;
         sr.transform.localScale = new Vector3(size / s.x, size / s.y, 1f);
@@ -449,6 +462,7 @@ public class PlanningUI : MonoBehaviour
         var trt = top.rectTransform;
         trt.anchorMin = new Vector2(0, 1); trt.anchorMax = new Vector2(1, 1); trt.pivot = new Vector2(0.5f, 1);
         trt.sizeDelta = new Vector2(0, topBarHeight); trt.anchoredPosition = Vector2.zero;
+        topBarRect = trt;
 
         Button home = UIKit.NewButton(trt, "< Home", () => GameManager.Ensure().GoHome());
         UIKit.Place((RectTransform)home.transform, new Vector2(0, 0.5f), new Vector2(0, 0.5f), new Vector2(24, 0), new Vector2(200, 80));
@@ -473,20 +487,20 @@ public class PlanningUI : MonoBehaviour
 
         actionBar = UIKit.NewRect("Actions", prt);
         actionBar.anchorMin = new Vector2(0, 1); actionBar.anchorMax = new Vector2(1, 1); actionBar.pivot = new Vector2(0, 1);
-        actionBar.offsetMin = new Vector2(350, -112); actionBar.offsetMax = new Vector2(-300, -16);
+        actionBar.offsetMin = new Vector2(350, -102); actionBar.offsetMax = new Vector2(-290, -12);
         var layout = actionBar.gameObject.AddComponent<HorizontalLayoutGroup>();
         layout.spacing = 12; layout.childControlWidth = true; layout.childControlHeight = true;
         layout.childForceExpandWidth = false; layout.childForceExpandHeight = true;
 
         doneButton = UIKit.NewButton(prt, "Done", ClosePanel, UIKit.Green, 34);
-        UIKit.Place((RectTransform)doneButton.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -16), new Vector2(240, 96));
+        UIKit.Place((RectTransform)doneButton.transform, new Vector2(1, 1), new Vector2(1, 1), new Vector2(-24, -12), new Vector2(240, 90));
 
         Image area = UIKit.NewImage("Timeline", prt, new Color(1, 1, 1, 0.03f));
         timelineArea = area.rectTransform;
         timelineArea.anchorMin = new Vector2(0, 0); timelineArea.anchorMax = new Vector2(1, 1);
         timelineArea.pivot = new Vector2(0, 1);
-        timelineArea.offsetMin = new Vector2(200, 46);
-        timelineArea.offsetMax = new Vector2(-24, -140);
+        timelineArea.offsetMin = new Vector2(200, 40);
+        timelineArea.offsetMax = new Vector2(-24, -118);
 
         Image ph = UIKit.NewImage("Playhead", timelineArea, UIKit.Gold);
         ph.raycastTarget = false;

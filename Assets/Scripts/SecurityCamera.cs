@@ -12,15 +12,16 @@ public class SecurityCamera : MonoBehaviour
     public static readonly List<SecurityCamera> All = new List<SecurityCamera>();
 
     [Tooltip("Child sprite (a circle) that shows the viewing radius.")]
-    public SpriteRenderer rangeRenderer;
-    public Color activeColor = new Color(1f, 0f, 0f, 0.25f);
-    public Color disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.2f);
+    [SerializeField] SpriteRenderer rangeRenderer;
+    [SerializeField] Color activeColor = new Color(1f, 0f, 0f, 0.25f);
+    [SerializeField] Color disabledColor = new Color(0.5f, 0.5f, 0.5f, 0.2f);
 
     public Vector2Int Cell { get; private set; }
     public float Radius { get; private set; }
 
     MapBuilder map;
     float disabledUntil = -1f;
+    VisionCone cone;
 
     void OnEnable() => All.Add(this);
     void OnDisable() => All.Remove(this);
@@ -37,8 +38,14 @@ public class SecurityCamera : MonoBehaviour
         col.isTrigger = true;
         col.radius = radius;
 
+        // The view is drawn as rays that stop at walls, instead of a plain circle.
         if (rangeRenderer != null)
-            rangeRenderer.transform.localScale = Vector3.one * radius * 2f; // a Unity circle sprite is 1 unit wide
+        {
+            Material mat = rangeRenderer.sharedMaterial;
+            rangeRenderer.enabled = false;
+            cone = VisionCone.Create("Camera view", map, () => Cell, null, radius, 360f, activeColor, mat, 2);
+            cone.transform.SetParent(transform.parent, true);
+        }
 
         ResetState();
     }
@@ -51,8 +58,8 @@ public class SecurityCamera : MonoBehaviour
 
     void Update()
     {
-        if (rangeRenderer != null && RunClock.Instance != null)
-            rangeRenderer.color = IsDisabledAt(RunClock.Instance.CurrentTime) ? disabledColor : activeColor;
+        if (cone != null && RunClock.Instance != null)
+            cone.SetColor(IsDisabledAt(RunClock.Instance.CurrentTime) ? disabledColor : activeColor);
     }
 
     void OnTriggerStay2D(Collider2D other)

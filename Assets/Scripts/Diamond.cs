@@ -4,7 +4,7 @@ using UnityEngine;
 [RequireComponent(typeof(Collider2D))]
 public class Diamond : MonoBehaviour
 {
-    public SpriteRenderer body;
+    [SerializeField] SpriteRenderer body;
 
     public bool Collected { get; private set; }
 

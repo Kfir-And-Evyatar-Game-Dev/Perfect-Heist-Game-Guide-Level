@@ -7,16 +7,16 @@ using UnityEngine;
 public class Guard : MonoBehaviour
 {
     [Tooltip("How far the guard sees, in cells.")]
-    public float viewDistance = 3f;
+    [SerializeField] float viewDistance = 3f;
 
     [Tooltip("Total width of the view cone, in degrees.")]
-    public float viewAngle = 90f;
+    [SerializeField] float viewAngle = 90f;
 
     [Tooltip("Optional child object that is rotated to face the walking direction.")]
-    public Transform facingVisual;
+    [SerializeField] Transform facingVisual;
 
     [Tooltip("Tick if the image shows the guard looking toward the bottom of the picture.")]
-    public bool imageFacesDown = true;
+    [SerializeField] bool imageFacesDown = true;
 
     public Vector2 DocPos { get; private set; }
     /// <summary>Walking direction in document coordinates (y down).</summary>
@@ -29,6 +29,9 @@ public class Guard : MonoBehaviour
     public Vector2Int PatrolStart => pointA;
     public Vector2Int PatrolEnd => pointB;
 
+    [Tooltip("Colour of the guard's field of view.")]
+    [SerializeField] Color viewColor = new Color(0.2f, 0.45f, 1f, 0.3f);
+
     public void Init(MapBuilder map, Vector2Int start, Vector2Int patrolEnd, float period)
     {
         this.map = map;
@@ -36,6 +39,15 @@ public class Guard : MonoBehaviour
         pointB = patrolEnd;
         this.period = Mathf.Max(0.1f, period);
         ShowAt(0f);
+
+        // Blue field of view that follows the guard, turns with him and stops at walls.
+        SpriteRenderer sr = GetComponentInChildren<SpriteRenderer>();
+        if (sr != null)
+        {
+            VisionCone cone = VisionCone.Create(name + " view", map, () => DocPos, () => Facing,
+                                                viewDistance, viewAngle, viewColor, sr.sharedMaterial, 2);
+            cone.transform.SetParent(transform.parent, true);
+        }
     }
 
     /// <summary>Patrol position at run time t: A to B in the first half of the period, back in the second.</summary>

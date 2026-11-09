@@ -8,10 +8,10 @@ using UnityEngine;
 public class ExitZone : MonoBehaviour
 {
     [Tooltip("Rotation of the parked van. The image points up; -90 turns it to face right, along the street.")]
-    public float parkedAngle = -90f;
+    [SerializeField] float parkedAngle = -90f;
 
     [Tooltip("Acceleration when driving away, in cells per second squared.")]
-    public float acceleration = 6f;
+    [SerializeField] float acceleration = 6f;
 
     MapBuilder map;
     Vector3 parkedPosition;

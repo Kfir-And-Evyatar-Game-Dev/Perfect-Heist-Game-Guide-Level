@@ -19,31 +19,32 @@ public class GuardRoute
 /// </summary>
 public class LevelSpawner : MonoBehaviour
 {
-    public MapBuilder map;
-    public RunClock clock;
+    [SerializeField] MapBuilder map;
+    [SerializeField] RunClock clock;
 
     [Header("Prefabs")]
-    public Character characterPrefab;
-    public Guard guardPrefab;
-    public SecurityCamera cameraPrefab;
-    public Diamond diamondPrefab;
-    public ExitZone exitPrefab;
+    [SerializeField] Character characterPrefab;
+    [SerializeField] Guard guardPrefab;
+    [SerializeField] SecurityCamera cameraPrefab;
+    [SerializeField] Diamond diamondPrefab;
+    [SerializeField] ExitZone exitPrefab;
 
     [Header("Level settings")]
     [Tooltip("Camera viewing radius in cells (tutorial: 2).")]
-    public float cameraRadius = 2f;
-    public float cameraOffSeconds = 8f;
-    public List<GuardRoute> guardRoutes = new List<GuardRoute> { new GuardRoute() };
+    [SerializeField] float cameraRadius = 2f;
+    [SerializeField] float cameraOffSeconds = 8f;
+    [SerializeField] List<GuardRoute> guardRoutes = new List<GuardRoute> { new GuardRoute() };
 
     [Header("Team")]
-    public List<CharacterData> team = new List<CharacterData>
+    [SerializeField]
+    List<CharacterData> team = new List<CharacterData>
     {
         new CharacterData { displayName = "Hacker", role = CharacterRole.Hacker },
         new CharacterData { displayName = "Sneak",  role = CharacterRole.Sneak },
     };
 
     [Tooltip("Give the team the correct tutorial plan (the \"Show me\" solution). Press Space to run it.")]
-    public bool useDemoPlan = true;
+    [SerializeField] bool useDemoPlan = true;
 
     readonly List<Character> characters = new List<Character>();
     readonly List<Guard> guards = new List<Guard>();
@@ -55,6 +56,9 @@ public class LevelSpawner : MonoBehaviour
     public List<SecurityCamera> Cameras => cameras;
     public List<Guard> Guards => guards;
     public List<ExitZone> Vans => vans;
+    public MapBuilder Map => map;
+    public RunClock Clock => clock;
+    public float CameraOffSeconds => cameraOffSeconds;
 
     void Start()
     {
@@ -84,7 +88,9 @@ public class LevelSpawner : MonoBehaviour
                         cameras.Add(cam);
                         break;
 
-                    case '1': case '2': case '3':
+                    case '1':
+                    case '2':
+                    case '3':
                         int number = ch - '0';
                         GuardRoute route = guardRoutes.Find(r => r.guardNumber == number)
                                            ?? new GuardRoute { guardNumber = number, patrolEnd = cell };
