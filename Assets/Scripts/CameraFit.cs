@@ -13,8 +13,11 @@ public class CameraFit : MonoBehaviour
     [Tooltip("Empty space around the map, in cells.")]
     public float margin = 0.5f;
 
-    [Tooltip("Extra space below the map, in cells (room for the timeline UI later).")]
+    [Tooltip("Extra space below the map, in cells (room for the planning panel).")]
     public float bottomSpace = 0f;
+
+    [Tooltip("Extra space above the map, in cells (room for the message bar).")]
+    public float topSpace = 0f;
 
     Camera cam;
     float lastAspect = -1f;
@@ -28,15 +31,25 @@ public class CameraFit : MonoBehaviour
         Fit();
     }
 
+    /// <summary>Change the reserved space (e.g. from the UI) and refit right away.</summary>
+    public void SetSpace(float top, float bottom)
+    {
+        topSpace = top;
+        bottomSpace = bottom;
+        lastAspect = -1f;
+    }
+
     public void Fit()
     {
+        if (cam == null) cam = GetComponent<Camera>();
         float width = map.Width + margin * 2f;
-        float height = map.Height + margin * 2f + bottomSpace;
+        float height = map.Height + margin * 2f + bottomSpace + topSpace;
 
         // Orthographic size is half the visible height; the visible width is that times the aspect.
         cam.orthographicSize = Mathf.Max(height / 2f, width / 2f / cam.aspect);
 
         Vector3 p = transform.position;
-        transform.position = new Vector3(map.Width / 2f, map.Height / 2f - bottomSpace / 2f, p.z);
+        float centerY = map.Height / 2f - bottomSpace / 2f + topSpace / 2f;
+        transform.position = new Vector3(map.Width / 2f, centerY, p.z);
     }
 }

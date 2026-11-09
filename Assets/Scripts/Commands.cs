@@ -47,7 +47,7 @@ public class MoveCommand : Command
 
     public MoveCommand(Vector2Int target) { Target = target; }
 
-    public override string Label => $"Move ({Target.x},{Target.y})";
+    public override string Label => "Walk";
 
     public override float Duration => path == null ? 0f : (path.Count - 1) / Character.Speed;
 
@@ -90,7 +90,7 @@ public class DisableCameraCommand : Command
         Seconds = seconds;
     }
 
-    public override string Label => $"Camera off {Seconds:0.#}s";
+    public override string Label => "Cam off";
     public override float Duration => 0f;
 
     public override void Begin(Character character)

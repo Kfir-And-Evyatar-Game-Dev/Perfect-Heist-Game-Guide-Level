@@ -26,6 +26,9 @@ public class Character : MonoBehaviour
     /// <summary>Walking speed in cells per second (from the level design).</summary>
     public const float Speed = 2f;
 
+    /// <summary>Seconds a character takes to get into the getaway van.</summary>
+    public const float BoardTime = 0.5f;
+
     public SpriteRenderer body;
 
     public string DisplayName { get; private set; }
@@ -35,17 +38,26 @@ public class Character : MonoBehaviour
     public bool HasDiamond { get; private set; }
     public bool InExit { get; set; }
 
+    /// <summary>True once the character has climbed into the van and disappeared.</summary>
+    public bool Boarded { get; private set; }
+
     public readonly List<Command> Plan = new List<Command>();
 
     MapBuilder map;
     Rigidbody2D rb;
+    Collider2D col;
     Diamond touchingDiamond;
+    ExitZone van;
     Color color;
+    Vector3 baseScale;
+    float boardStart = -1f;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         rb.bodyType = RigidbodyType2D.Kinematic;
+        col = GetComponent<Collider2D>();
+        baseScale = transform.localScale;
         if (body == null) body = GetComponentInChildren<SpriteRenderer>();
     }
 
@@ -100,6 +112,8 @@ public class Character : MonoBehaviour
     /// <summary>During the run: start due commands and move with physics so triggers fire.</summary>
     public void Simulate(float t)
     {
+        if (Boarded) return;
+
         DocPos = PositionAt(t);
         foreach (Command c in Plan)
         {
@@ -109,7 +123,27 @@ public class Character : MonoBehaviour
                 c.Begin(this);
             }
         }
-        rb.MovePosition(map.DocToWorld(DocPos));
+
+        // Plan finished while touching the van: start climbing in.
+        if (boardStart < 0f && van != null && InExit && t >= PlanEndTime)
+            boardStart = t;
+
+        Vector3 target = map.DocToWorld(DocPos);
+        if (boardStart >= 0f)
+        {
+            // Slide into the van and shrink over BoardTime seconds, then disappear.
+            float p = Mathf.Clamp01((t - boardStart) / BoardTime);
+            target = Vector3.Lerp(target, van.transform.position, p);
+            transform.localScale = baseScale * Mathf.Lerp(1f, 0.2f, p);
+            if (p >= 1f)
+            {
+                Boarded = true;
+                if (body != null) body.enabled = false;
+                col.enabled = false; // no more camera or exit collisions
+                return;
+            }
+        }
+        rb.MovePosition(target);
     }
 
     /// <summary>During planning: show where the character will be at time t.</summary>
@@ -123,9 +157,18 @@ public class Character : MonoBehaviour
     {
         HasDiamond = false;
         InExit = false;
+        Boarded = false;
+        boardStart = -1f;
         touchingDiamond = null;
+        van = null;
         foreach (Command c in Plan) c.Begun = false;
-        if (body != null) body.color = color;
+        transform.localScale = baseScale;
+        if (col != null) col.enabled = true;
+        if (body != null)
+        {
+            body.enabled = true;
+            body.color = color;
+        }
         if (map != null) ShowAt(0f);
     }
 
@@ -158,7 +201,11 @@ public class Character : MonoBehaviour
     void OnTriggerEnter2D(Collider2D other)
     {
         if (other.TryGetComponent(out Diamond d)) touchingDiamond = d;
-        if (other.TryGetComponent(out ExitZone _)) InExit = true;
+        if (other.TryGetComponent(out ExitZone e))
+        {
+            InExit = true;
+            van = e;
+        }
     }
 
     void OnTriggerExit2D(Collider2D other)

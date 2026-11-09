@@ -272,6 +272,7 @@ MonoBehaviour:
   map: {fileID: 1980524768}
   margin: 0.5
   bottomSpace: 0
+  topSpace: 0
 --- !u!1 &522875053
 GameObject:
   m_ObjectHideFlags: 0
@@ -1015,6 +1016,8 @@ GameObject:
   - component: {fileID: 768575714}
   - component: {fileID: 768575713}
   - component: {fileID: 768575712}
+  - component: {fileID: 768575716}
+  - component: {fileID: 768575715}
   m_Layer: 0
   m_Name: Level
   m_TagString: Untagged
@@ -1086,6 +1089,45 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &768575715
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 768575711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 854ca610b83e7364696bcfc900c45e49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TutorialDirector
+  ui: {fileID: 768575716}
+  spawner: {fileID: 768575712}
+  clock: {fileID: 768575713}
+  map: {fileID: 1980524768}
+--- !u!114 &768575716
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 768575711}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 25de24d6d81345b42a2f91e259afa779, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlanningUI
+  spawner: {fileID: 768575712}
+  clock: {fileID: 768575713}
+  map: {fileID: 0}
+  cameraFit: {fileID: 519420033}
+  topBarHeight: 150
+  bottomPanelHeight: 330
+  pixelsPerSecond: 40
+  rowHeight: 80
+  allowCameraOff: 1
+  allowPickup: 1
+  allowRun: 1
 --- !u!1 &824601248
 GameObject:
   m_ObjectHideFlags: 0
@@ -2055,6 +2097,10 @@ MonoBehaviour:
 
     ..P......X.'
   centerCamera: 1
+  thinWalls: 1
+  wallThickness: 0.25
+  wallLineSprite: {fileID: 0}
+  wallColor: {r: 0.22, g: 0.25, b: 0.32, a: 1}
 --- !u!156049354 &1980524769
 Grid:
   m_ObjectHideFlags: 0

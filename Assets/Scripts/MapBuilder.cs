@@ -36,6 +36,16 @@ public class MapBuilder : MonoBehaviour
     [Tooltip("Move the Main Camera to the middle of the map after building.")]
     public bool centerCamera = true;
 
+    [Header("Thin walls (looks only: a wall cell still blocks movement and sight)")]
+    [Tooltip("Draw walls as thin lines through the middle of the wall cells instead of full tiles.")]
+    public bool thinWalls = true;
+    [Range(0.05f, 1f)] public float wallThickness = 0.25f;
+    [Tooltip("Any plain white square sprite, e.g. Sprites/Wall.")]
+    public Sprite wallLineSprite;
+    public Color wallColor = new Color(0.22f, 0.25f, 0.32f);
+
+    const string WallVisualsName = "Wall Visuals";
+
     string[] Rows => layout.Replace("\r", "").Split('\n');
 
     public int Width => Rows[0].Length;
@@ -50,6 +60,13 @@ public class MapBuilder : MonoBehaviour
     /// <summary>World position of a (possibly fractional) document position.</summary>
     public Vector3 DocToWorld(Vector2 doc) =>
         floorTilemap.transform.TransformPoint(new Vector3(doc.x + 0.5f, Height - 1 - doc.y + 0.5f, 0f));
+
+    /// <summary>The document cell under a world position (for taps on the map).</summary>
+    public Vector2Int WorldToDoc(Vector3 world)
+    {
+        Vector3 local = floorTilemap.transform.InverseTransformPoint(world);
+        return new Vector2Int(Mathf.FloorToInt(local.x), Height - 1 - Mathf.FloorToInt(local.y));
+    }
 
     /// <summary>The layout character at a document cell, e.g. '$' for the target.</summary>
     public char CharAt(int x, int y) => Rows[y][x];
@@ -140,6 +157,8 @@ public class MapBuilder : MonoBehaviour
             }
         }
 
+        BuildThinWalls();
+
         if (centerCamera && Camera.main != null)
         {
             Transform cam = Camera.main.transform;
@@ -154,5 +173,67 @@ public class MapBuilder : MonoBehaviour
             EditorSceneManager.MarkSceneDirty(gameObject.scene);
 #endif
         Debug.Log($"MapBuilder: built a {Width}x{Height} map.", this);
+    }
+
+    bool IsWallCell(int x, int y) => InBounds(new Vector2Int(x, y)) && CharAt(x, y) == '#';
+
+    /// <summary>
+    /// Replaces the full wall tiles with thin bars: a small square in the middle of
+    /// every wall cell, joined to each neighbouring wall cell by a bar.
+    /// </summary>
+    void BuildThinWalls()
+    {
+        Transform old = transform.Find(WallVisualsName);
+        if (old != null)
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying) Undo.DestroyObjectImmediate(old.gameObject);
+            else
+#endif
+                Destroy(old.gameObject);
+        }
+
+        var wallRenderer = wallsTilemap.GetComponent<TilemapRenderer>();
+        bool drawThin = thinWalls && wallLineSprite != null;
+        if (thinWalls && wallLineSprite == null)
+            Debug.LogWarning("MapBuilder: assign Wall Line Sprite to draw thin walls. Showing full wall tiles instead.", this);
+        if (wallRenderer != null) wallRenderer.enabled = !drawThin;
+        if (!drawThin) return;
+
+        var root = new GameObject(WallVisualsName).transform;
+        root.SetParent(transform, false);
+#if UNITY_EDITOR
+        Undo.RegisterCreatedObjectUndo(root.gameObject, "Build Thin Walls");
+#endif
+
+        float t = wallThickness;
+        for (int y = 0; y < Height; y++)
+        {
+            for (int x = 0; x < Width; x++)
+            {
+                if (!IsWallCell(x, y)) continue;
+                Vector3 here = DocToWorld(new Vector2(x, y));
+                AddBar(root, here, new Vector2(t, t));
+                if (IsWallCell(x + 1, y))   // joined to the right
+                    AddBar(root, DocToWorld(new Vector2(x + 0.5f, y)), new Vector2(1f + t, t));
+                if (IsWallCell(x, y + 1))   // joined downward (document y grows down)
+                    AddBar(root, DocToWorld(new Vector2(x, y + 0.5f)), new Vector2(t, 1f + t));
+            }
+        }
+    }
+
+    void AddBar(Transform parent, Vector3 worldPos, Vector2 size)
+    {
+        var go = new GameObject("Wall");
+        go.transform.SetParent(parent, false);
+        go.transform.position = worldPos;
+
+        Vector2 spriteSize = wallLineSprite.bounds.size;
+        go.transform.localScale = new Vector3(size.x / spriteSize.x, size.y / spriteSize.y, 1f);
+
+        var sr = go.AddComponent<SpriteRenderer>();
+        sr.sprite = wallLineSprite;
+        sr.color = wallColor;
+        sr.sortingOrder = 1;
     }
 }

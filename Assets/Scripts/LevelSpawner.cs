@@ -49,12 +49,16 @@ public class LevelSpawner : MonoBehaviour
     readonly List<Guard> guards = new List<Guard>();
     readonly List<SecurityCamera> cameras = new List<SecurityCamera>();
     readonly List<Diamond> diamonds = new List<Diamond>();
+    readonly List<ExitZone> vans = new List<ExitZone>();
+
+    public List<Character> Characters => characters;
+    public List<SecurityCamera> Cameras => cameras;
 
     void Start()
     {
         Spawn();
         if (useDemoPlan) ApplyDemoPlan();
-        clock.SetActors(characters, guards, cameras, diamonds);
+        clock.SetActors(characters, guards, cameras, diamonds, vans);
         clock.ResetToPlanning();
     }
 
@@ -93,7 +97,9 @@ public class LevelSpawner : MonoBehaviour
                         break;
 
                     case 'X':
-                        Instantiate(exitPrefab, pos, Quaternion.identity, transform);
+                        ExitZone van = Instantiate(exitPrefab, pos, Quaternion.identity, transform);
+                        van.Init(map);
+                        vans.Add(van);
                         break;
 
                     case 'P':
@@ -116,7 +122,7 @@ public class LevelSpawner : MonoBehaviour
     /// off at second 3, the sneak waits for the guard to turn its back, crosses,
     /// takes the diamond and both meet at the van.
     /// </summary>
-    void ApplyDemoPlan()
+    public void ApplyDemoPlan()
     {
         Character hacker = characters.Find(c => c.Role == CharacterRole.Hacker);
         Character sneak = characters.Find(c => c.Role == CharacterRole.Sneak);
@@ -151,7 +157,7 @@ public class LevelSpawner : MonoBehaviour
         sneak.PreparePlan();
     }
 
-    Vector2Int FindCell(char ch)
+    public Vector2Int FindCell(char ch)
     {
         for (int y = 0; y < map.Height; y++)
             for (int x = 0; x < map.Width; x++)

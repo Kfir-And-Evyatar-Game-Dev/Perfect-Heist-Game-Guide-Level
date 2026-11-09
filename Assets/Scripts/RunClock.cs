@@ -39,16 +39,19 @@ public class RunClock : MonoBehaviour
     readonly List<Guard> guards = new List<Guard>();
     readonly List<SecurityCamera> cameras = new List<SecurityCamera>();
     readonly List<Diamond> diamonds = new List<Diamond>();
+    readonly List<ExitZone> vans = new List<ExitZone>();
 
     void Awake() => Instance = this;
 
     public void SetActors(IEnumerable<Character> chars, IEnumerable<Guard> gs,
-                          IEnumerable<SecurityCamera> cams, IEnumerable<Diamond> ds)
+                          IEnumerable<SecurityCamera> cams, IEnumerable<Diamond> ds,
+                          IEnumerable<ExitZone> vs)
     {
         characters.Clear(); characters.AddRange(chars);
         guards.Clear(); guards.AddRange(gs);
         cameras.Clear(); cameras.AddRange(cams);
         diamonds.Clear(); diamonds.AddRange(ds);
+        vans.Clear(); vans.AddRange(vs);
     }
 
     void Update()
@@ -76,10 +79,11 @@ public class RunClock : MonoBehaviour
 
         foreach (Guard g in guards) g.ShowAt(RunTime);
         foreach (Character c in characters) c.Simulate(RunTime);
+        foreach (ExitZone v in vans) v.Simulate(RunTime);
 
         foreach (Guard g in guards)
             foreach (Character c in characters)
-                if (g.CanSee(c.DocPos))
+                if (!c.Boarded && g.CanSee(c.DocPos))
                 {
                     ReportDetected(c, "the guard");
                     return;
@@ -110,17 +114,25 @@ public class RunClock : MonoBehaviour
 
     void CheckFinished()
     {
-        // Small grace period so the exit trigger has a physics step to register.
+        bool haveDiamond = characters.Exists(c => c.HasDiamond);
+        bool allBoarded = characters.TrueForAll(c => c.Boarded);
+
+        // Everyone is in the van with the diamond: drive away, and win once it's off the map.
+        if (allBoarded && haveDiamond && vans.Count > 0)
+        {
+            ExitZone van = vans[0];
+            van.StartDriving(RunTime);
+            if (van.HasLeftMap) End(true, $"Heist complete in {RunTime:0.0} seconds.");
+            return;
+        }
+
+        // Otherwise wait until every plan is over (plus time to climb in and for the trigger to register).
         const float grace = 0.25f;
         foreach (Character c in characters)
-            if (RunTime < c.PlanEndTime + grace) return;
+            if (RunTime < c.PlanEndTime + Character.BoardTime + grace) return;
 
-        bool haveDiamond = characters.Exists(c => c.HasDiamond);
-        bool allOut = characters.TrueForAll(c => c.InExit);
-
-        if (haveDiamond && allOut) End(true, $"Heist complete in {RunTime:0.0} seconds.");
-        else if (!haveDiamond) End(false, "The plan ended without the diamond.");
-        else End(false, "The plan ended before everyone reached the getaway van.");
+        if (!haveDiamond) End(false, "The plan ended without the diamond.");
+        else End(false, "The plan ended before everyone got into the getaway van.");
     }
 
     void End(bool success, string reason)
@@ -151,6 +163,7 @@ public class RunClock : MonoBehaviour
     void RestoreActors()
     {
         foreach (Diamond d in diamonds) d.ResetState();
+        foreach (ExitZone v in vans) v.ResetState();
         foreach (SecurityCamera cam in cameras) cam.ResetState();
         foreach (Guard g in guards) g.ShowAt(0f);
         foreach (Character c in characters) c.ResetState();
