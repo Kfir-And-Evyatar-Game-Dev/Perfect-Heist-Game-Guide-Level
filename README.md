@@ -10,7 +10,7 @@
 | | |
 |---|---|
 | **לשחק בדפדפן, ולהוריד APK לאנדרואיד** | **[kfir-and-evyatar.itch.io/perfect-heist-guide-level](https://kfir-and-evyatar.itch.io/perfect-heist-guide-level)** (גם בטלפון, לרוחב) |
-| **סרטון מהטלפון** | *(יתווסף)* |
+| **סרטון מהטלפון (Android)** | **[youtu.be/fIYPyt7VN1s](https://youtu.be/fIYPyt7VN1s)** |
 | **תכנון הרמות של המשחק הזה** | [Level_Design.md: השוד המושלם](https://github.com/Kfir-And-Evyatar-Game-Dev/---Perfect-Heist/blob/main/Level_Design.md), עם מפות ותרשימים |
 
 ### הריפוזיטוריז של חלק א (תכנון רמות לכל N+1 המשחקים)
